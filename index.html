@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pair Up – Picture Matching Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1d1a33; --panel:#2a2648; --panel2:#352f5c; --line:#4a4380;
+  --ink:#f2efff; --mute:#a9a3d1; --accent:#ffb547; --ok:#3ecf8e; --bad:#f2566e;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink); font:16px/1.5 'DM Sans',system-ui,sans-serif; min-height:100vh;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(255,181,71,.10) 0 90px, transparent 91px),
+    radial-gradient(circle at 92% 30%, rgba(111,98,214,.25) 0 140px, transparent 141px),
+    radial-gradient(var(--line) 1px, transparent 1.5px);
+  background-size:auto,auto,26px 26px; background-attachment:fixed;
+}
+h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header.top svg{width:38px;height:38px;flex:none}
+header.top h1{font-size:26px;font-weight:800}
+header.top .step{margin-left:auto;color:var(--mute);font-size:15px}
+.pips{display:flex;gap:6px;margin:0 0 18px}
+.pips i{flex:1;height:6px;border-radius:3px;background:var(--panel2)}
+.pips i.done{background:var(--accent)} .pips i.now{background:var(--ink)}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:var(--r);padding:16px}
+.stage{display:flex;justify-content:center;align-items:center;min-height:220px}
+
+h2{font-size:22px;margin:22px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.tile{padding:0;border:3px solid var(--line);background:var(--panel2);border-radius:12px;cursor:pointer;overflow:hidden;transition:transform .12s,border-color .12s}
+.tile:hover,.tile:focus-visible{transform:translateY(-3px);border-color:var(--accent);outline:none}
+.tile img,.cell img,.pframe img,.aframe img{display:block;pointer-events:none}
+.pframe{display:block;aspect-ratio:1;border-radius:50%;overflow:hidden;background:var(--panel2);box-shadow:0 0 0 4px var(--line)}
+.pframe img{width:100%;height:100%;object-fit:cover;transform:scale(1.06)}
+.aframe{display:block;aspect-ratio:5/2;background:#000;overflow:hidden}
+.aframe img{width:100%;height:100%;object-fit:contain}
+.aframe.inv img{filter:invert(1)}
+.stage .pframe{width:min(340px,44vh)}
+.cellp{display:flex;align-items:center;justify-content:center;padding:6px}
+.cellp .pframe{height:100%;width:auto;aspect-ratio:1;box-shadow:0 0 0 4px var(--panel2)}
+.cellp.ok .pframe{box-shadow:0 0 0 5px var(--ok)}
+.cellp.bad .pframe{box-shadow:0 0 0 5px var(--bad)}
+.btn{font:700 16px 'DM Sans',sans-serif;border:0;border-radius:999px;padding:12px 26px;cursor:pointer;background:var(--accent);color:#2b1d00}
+.btn:hover{filter:brightness(1.08)} .btn:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.center{text-align:center}
+.intro p{color:var(--mute);max-width:520px;margin:12px auto 24px}
+.intro h2{font-size:34px}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(14,12,28,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;z-index:10}
+.modal .aframe{width:min(94vw,900px);border:3px solid var(--accent);border-radius:14px}
+.modal .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.modal p{margin:0;color:var(--mute)}
+/* review */
+.pairs{display:grid;grid-template-columns:1fr 2.2fr;gap:12px 16px;max-width:760px;margin:0 auto}
+.colhead{font:800 17px 'Bricolage Grotesque',sans-serif;text-align:center;color:var(--mute)}
+.cell{aspect-ratio:5/2;border-radius:14px;overflow:hidden;border:4px solid var(--line);background:var(--panel2);position:relative}
+.cell .aframe{aspect-ratio:auto;width:100%;height:100%}
+
+.cell.drag{cursor:grab;border-color:var(--accent)}
+.cell.drag:active{cursor:grabbing}
+.cell.sel{outline:4px solid var(--ink);outline-offset:2px}
+.cell.over{transform:scale(1.04)}
+.cell.ok{border-color:var(--ok);box-shadow:0 0 0 3px rgba(62,207,142,.25)}
+.cell.bad{border-color:var(--bad);box-shadow:0 0 0 3px rgba(242,86,110,.25)}
+.hint{color:var(--mute);text-align:center;margin:0 0 16px}
+.score{font:800 40px 'Bricolage Grotesque',sans-serif;text-align:center;margin:0 0 4px}
+.actions{display:flex;justify-content:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.missing{background:var(--panel2);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<!--
+  IMAGE LOCATION
+  Put your 24 pictures in this repo. By default the game looks for names like
+  image1.jpg … image12.jpg and answer1.jpg … answer12.jpg (also tries "Image 1", "Image_1",
+  .png, .jpeg, .webp etc.) in an "Assets/" folder (the default for the Pair-Up repo), "images/", the repo root, or "Matching Game/".
+  To force exact names, set the patterns below, e.g. "images/image{n}.jpg"
+-->
+<div class="wrap" id="app"></div>
+
+<script>
+const CONFIG = { imagePattern: null, answerPattern: null };
+const N = 12;
+const app = document.getElementById('app');
+let S = {};
+
+const logo = `<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="9" width="22" height="22" rx="5" fill="#6f62d6"/><circle cx="26" cy="21" r="11" fill="#ffb547" fill-opacity=".92"/></svg>`;
+
+const loadImg = u => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(u); i.onerror = () => rej(); i.src = u; });
+async function firstOk(list) {
+  for (let i = 0; i < list.length; i += 40) {
+    try { return await Promise.any(list.slice(i, i + 40).map(loadImg)); } catch (e) {}
+  }
+  return null;
+}
+async function resolvePattern(kind) {
+  if (CONFIG[kind + 'Pattern']) return CONFIG[kind + 'Pattern'];
+  const names = kind === 'image' ? ['image', 'Image', 'picture', 'Picture', 'img'] : ['answer', 'Answer', 'ans', 'Ans', 'a'];
+  const list = [];
+  for (const f of ['Assets/', 'assets/', 'Assets/Images/', 'Assets/Image/', 'Assets/Pictures/', 'Assets/Answers/', 'Assets/Answer/', 'images/', '', 'Matching Game/'])
+    for (const n of names) for (const s of ['', ' ', '_', '-']) for (const e of ['jpg', 'png', 'jpeg', 'webp', 'gif', 'JPG', 'PNG'])
+      list.push(`${f}${n}${s}1.${e}`);
+  const hit = await firstOk(list);
+  return hit ? hit.replace(/1(\.[^.]+)$/, '{n}$1') : null;
+}
+
+// Each file is resolved on its own, so a stray lowercase name (e.g. image_6.jpg) still loads on GitHub Pages
+const flip = u => u.replace(/[^\/]*$/, b => (b[0] === b[0].toUpperCase() ? b[0].toLowerCase() : b[0].toUpperCase()) + b.slice(1));
+const resolveAll = pat => Promise.all([...Array(N).keys()].map(async n => { const u = pat.replace('{n}', n + 1); return (await firstOk([u, flip(u)])) || u; }));
+const iu = n => S.iUrls[n];
+const au = n => S.aUrls[n];
+const pic = (u, alt) => `<img src="${u}" alt="${alt}" onerror="this.outerHTML='<div class=&quot;missing&quot; style=&quot;width:100%;height:100%&quot;>Missing</div>'">`;
+const LIGHT_ANSWERS = [8, 10, 11, 12]; // light-background screenshots, shown inverted so all answers share one dark look
+const picP = (n, alt) => `<span class="pframe">${pic(iu(n), alt)}</span>`;
+const picA = (n, alt) => `<span class="aframe${LIGHT_ANSWERS.includes(n + 1) ? ' inv' : ''}">${pic(au(n), alt)}</span>`;
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const head = (step) => `<header class="top">${logo}<h1>Pair Up</h1>${step ? `<span class="step">${step}</span>` : ''}</header>`;
+
+async function boot() {
+  app.innerHTML = head() + `<div class="card center"><p>Loading pictures…</p></div>`;
+  const [ip, ap] = await Promise.all([resolvePattern('image'), resolvePattern('answer')]);
+  if (!ip || !ap) {
+    const base = location.href.replace(/[^\/]*$/, '');
+    const t = ['Assets/Image_1.jpg', 'Assets/Answer_1.jpg'];
+    app.innerHTML = head() + `<div class="card"><h2>Pictures not found</h2>
+      <p>Couldn’t load ${!ip ? 'the picture set' : 'the answer set'} from this page: <b>${base}</b></p>
+      <p>Click each link. If it opens the picture, tell me; if it shows a 404 or “file not found”, that file isn’t at that address.</p>
+      <p>${t.map(x => `<a style="color:var(--accent)" href="${x}" target="_blank">${base}${x}</a>`).join('<br>')}</p>
+      <p>Fix: make sure the <b>Assets</b> folder with the 24 images is committed and pushed to the same repo folder as index.html, or set <b>CONFIG</b> at the top of the script.</p></div>`;
+    return;
+  }
+  const [iUrls, aUrls] = await Promise.all([resolveAll(ip), resolveAll(ap)]);
+  S = { ip, ap, iUrls, aUrls };
+  intro();
+}
+
+function intro() {
+  app.innerHTML = head() + `<div class="card center intro"><h2>Match each picture to its answer</h2>
+  <p>You’ll see one picture at a time with twelve answers below. Tap an answer to preview it full size, then confirm. Before you finish, you can rearrange your pairs.</p>
+  <button class="btn" data-act="start">Start game</button></div>`;
+}
+
+function start() {
+  Object.assign(S, { order: shuffle([...Array(N).keys()]), pool: shuffle([...Array(N).keys()]), idx: 0, picks: {}, used: new Set(), preview: null, rev: [], sel: null, done: false });
+  play();
+}
+
+function play() {
+  const cur = S.order[S.idx];
+  const avail = S.pool.filter(a => !S.used.has(a));
+  const pips = S.order.map((_, i) => `<i class="${i < S.idx ? 'done' : i === S.idx ? 'now' : ''}"></i>`).join('');
+  app.innerHTML = head(`Picture ${S.idx + 1} of ${N}`) + `<div class="pips">${pips}</div>
+  <div class="card stage">${picP(cur, 'Picture to match')}</div>
+  <h2>Which answer belongs to this picture?</h2>
+  <div class="grid">${avail.map(a => `<button class="tile" data-act="preview" data-a="${a}" aria-label="Preview answer">${picA(a, 'Answer option')}</button>`).join('')}</div>
+  ${S.preview !== null ? `<div class="modal" role="dialog" aria-modal="true">${picA(S.preview, 'Answer preview')}
+    <p>Use this answer for the picture?</p>
+    <div class="row"><button class="btn" data-act="confirm">Confirm answer</button><button class="btn ghost" data-act="cancel">Back to answers</button></div></div>` : ''}`;
+}
+
+function review() {
+  S.rev = S.order.map(i => S.picks[i]);
+  S.sel = null; renderReview();
+}
+
+function renderReview() {
+  const rows = S.order.map((img, slot) => {
+    const cls = S.done ? (S.rev[slot] === img ? 'ok' : 'bad') : 'drag';
+    return `<div class="cellp ${S.done ? cls : ''}">${picP(img, 'Picture ' + (slot + 1))}</div>
+      <div class="cell ${cls} ${S.sel === slot ? 'sel' : ''}" ${S.done ? '' : `draggable="true" data-slot="${slot}"`}>${picA(S.rev[slot], 'Chosen answer')}</div>`;
+  }).join('');
+  const correct = S.order.filter((img, s) => S.rev[s] === img).length;
+  app.innerHTML = head(S.done ? 'Results' : 'Review') +
+    (S.done
+      ? `<p class="score">${correct} of ${N} correct</p><p class="hint">Green borders are correct matches, red borders are incorrect.</p>`
+      : `<h2 class="center">Review your pairs</h2><p class="hint">Drag answers up or down to swap them (or tap two answers to swap). Pictures stay in place.</p>`) +
+    `<div class="pairs"><div class="colhead">Pictures</div><div class="colhead">Your answers</div>${rows}</div>
+    <div class="actions">${S.done ? `<button class="btn" data-act="start">Play again</button>` : `<button class="btn" data-act="submit">Submit answers</button>`}</div>`;
+}
+
+const swap = (a, b) => { [S.rev[a], S.rev[b]] = [S.rev[b], S.rev[a]]; };
+
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-act],[data-slot]'); if (!t) return;
+  const act = t.dataset.act;
+  if (act === 'start') start();
+  else if (act === 'preview') { S.preview = +t.dataset.a; play(); }
+  else if (act === 'cancel') { S.preview = null; play(); }
+  else if (act === 'confirm') {
+    S.picks[S.order[S.idx]] = S.preview; S.used.add(S.preview); S.preview = null; S.idx++;
+    S.idx >= N ? review() : play();
+    window.scrollTo(0, 0);
+  }
+  else if (act === 'submit') { S.done = true; renderReview(); window.scrollTo(0, 0); }
+  else if (t.dataset.slot !== undefined && !S.done) {
+    const s = +t.dataset.slot;
+    if (S.sel === null) S.sel = s; else { if (S.sel !== s) swap(S.sel, s); S.sel = null; }
+    renderReview();
+  }
+});
+
+let dragSlot = null;
+app.addEventListener('dragstart', e => { const c = e.target.closest('[data-slot]'); if (c) { dragSlot = +c.dataset.slot; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragSlot); } });
+app.addEventListener('dragover', e => { const c = e.target.closest('[data-slot]'); if (c && dragSlot !== null) { e.preventDefault(); c.classList.add('over'); } });
+app.addEventListener('dragleave', e => { const c = e.target.closest('[data-slot]'); if (c) c.classList.remove('over'); });
+app.addEventListener('drop', e => {
+  const c = e.target.closest('[data-slot]'); if (!c || dragSlot === null) return;
+  e.preventDefault(); const to = +c.dataset.slot;
+  if (to !== dragSlot) swap(dragSlot, to);
+  dragSlot = null; S.sel = null; renderReview();
+});
+app.addEventListener('dragend', () => { dragSlot = null; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.preview != null) { S.preview = null; play(); } });
+
+boot();
+</script>
+</body>
+</html>
